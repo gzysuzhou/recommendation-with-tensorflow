@@ -1,0 +1,3 @@
+{ "results": [
+
+  {"name":"Administrator","ACL":{"*":{"read":true}},"createdAt":"2017-08-29T03:31:46.254Z","updatedAt":"2017-08-30T16:18:01.929Z","objectId":"59a4e022128fe1005aedc37c"}] }

@@ -1,0 +1,5 @@
+{ "results": [
+
+  {"post":{"__type":"Pointer","className":"Post","objectId":"5b816a4e0b61600063e6ee4e"},"reason":"\b存在赌博内容","ACL":{"*":{"read":false,"write":false}},"createdAt":"2018-08-27T03:06:36.664Z","updatedAt":"2018-08-27T03:06:36.664Z","objectId":"5b836abc0b6160006202b7b0"},
+  {"post":{"__type":"Pointer","className":"Post","objectId":"5b84be369f54540031e5510d"},"reason":"\b存在赌博内容","ACL":{"*":{"read":false,"write":false}},"createdAt":"2018-08-28T06:36:42.585Z","updatedAt":"2018-08-28T06:36:42.585Z","objectId":"5b84ed7aa22b9d0037ce55fe"},
+  {"user":{"__type":"Pointer","className":"_User","objectId":"5bba8c100b6160006a5061ad"},"reason":"反馈和建议:为啥改头像都改不了..................","ACL":{"*":{"read":false,"write":false}},"createdAt":"2018-10-09T10:35:55.477Z","updatedAt":"2018-10-09T10:35:55.477Z","objectId":"5bbc848b0b6160006a6cbebc"}] }
