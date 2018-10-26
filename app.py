@@ -3,7 +3,9 @@ from flask import request
 import json
 from post import Post
 from activity import Activity
+from recommand import Recommand
 app = Flask(__name__)
+
 
 @app.route('/')
 def hello_world():
@@ -30,3 +32,6 @@ def new_activity():
     if not res:
         return 'error'
     return 'success'
+@app.route('/recommand/<int:userID>', methods=["GET"])
+def get_recommandation(userID):
+    return Recommand().getRecommand(userID)

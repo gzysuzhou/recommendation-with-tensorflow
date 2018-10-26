@@ -2,25 +2,49 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import time
+import redis
+import pickle
 class Recommand(object):
+    
+    redis = None
+    postKey = "postMap"
+    recommandResultKey = "recommandResult"
+
+    def __init__(self):
+        Recommand.redis = redis.Redis(host='127.0.0.1', port=6379, db=0)
+
+    def run(self, userID):
+        self.cleanData()
+        self.createMat()
+        self.getTrainModel()
+        self.trainningModel(userID)
 
     '''
     第一步：收集和清洗数据
     '''
     def cleanData(self):
-        start = time.time()
         ratings_df = pd.read_csv('user_score.csv')
         posts_df = pd.read_csv('postTag.csv')
-        
         posts_df['postRow'] = posts_df.index
         self.posts_df = posts_df[['postRow','postID','name']]
+        serliaze = pickle.dumps(self.posts_df)
+        Recommand.redis.set(Recommand.postKey, serliaze)
         ratings_df = pd.merge(ratings_df, posts_df, on='postID')
         self.ratings_df = ratings_df[['userID','postRow','score']]
+    
+    def getPostsDf(self):
+        ratings_df = pd.read_csv('user_score.csv')
+        posts_df = pd.read_csv('postTag.csv')
+        posts_df['postRow'] = posts_df.index
+        self.posts_df = posts_df[['postRow','postID','name']]
+        serliaze = pickle.dumps(self.posts_df)
+        Recommand.redis.set(Recommand.postKey, serliaze)
+        return self.postKey
 
     '''
     第二步：创建作品评分矩阵rating和评分纪录矩阵record
     '''
-    def createMux(self):
+    def createMat(self):
         self.userNo = self.ratings_df['userID'].max() + 1
         self.postNo = self.ratings_df['postRow'].max() + 1
         rating = np.zeros((self.postNo, self.userNo))
@@ -84,7 +108,7 @@ class Recommand(object):
     '''
     第四步：训练模型
     '''
-    def trainningModel(self):
+    def trainningModel(self, userID):
         # tf.summary的用法 https://www.cnblogs.com/lyc-seu/p/8647792.html
         tf.summary.scalar('loss',self.loss)
         #用来显示标量信息
@@ -99,35 +123,50 @@ class Recommand(object):
         init = tf.global_variables_initializer()
         sess.run(init)
         #运行
-        for i in range(50):
+        for i in range(1):
             _, post_summary = sess.run([self.train, summaryMerged])
             # 把训练的结果summaryMerged存在post里
             writer.add_summary(post_summary, i)
             # 把训练的结果保存下来
-
-
         Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
         predicts = np.dot(Current_X_parameters,Current_Theta_parameters.T) + self.rating_mean
+        serliaze = pickle.dumps(predicts)
+        Recommand.redis.set(Recommand.recommandResultKey, serliaze)
         # dot函数是np中的矩阵乘法，np.dot(x,y) 等价于 x.dot(y)
         errors = np.sqrt(np.sum((predicts - self.rating)**2))
         # sqrt(arr) ,计算各元素的平方根
-
-        user_id = input('您要想哪位用户进行推荐？请输入用户编号：')
-        sortedResult = predicts[:, int(user_id)].argsort()[::-1]
+        sortedResult = predicts[:, int(userID)].argsort()[::-1]
         # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
         idx = 0
         print('为该用户推荐的评分最高的20部作品是：'.center(80,'='))
         # center() 返回一个原字符串居中,并使用空格填充至长度 width 的新字符串。默认填充字符为空格。
         for i in sortedResult:
-            print('评分: %.2f, 作品ID: %s' % (predicts[i,int(user_id)],self.posts_df.iloc[i]['postID']))
+            print('评分: %.2f, 作品ID: %s' % (predicts[i,int(userID)],self.posts_df.iloc[i]['postID']))
             idx += 1
             if idx == 20:break
     
-    def run(self):
-        self.cleanData()
-        self.createMux()
-        self.getTrainModel()
-        self.trainningModel()
-
-Recommand().run()
+    def getRecommand(self, userID):
+        cacheRecommand = Recommand.redis.get(Recommand.recommandResultKey)
+        cachePostMap = Recommand.redis.get(Recommand.postKey)
+        posts_df = []
+        posts = ''
+        if cacheRecommand:
+            predicts = pickle.loads(cacheRecommand)
+            sortedResult = predicts[:, int(userID)].argsort()[::-1]
+            # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
+            idx = 0
+            #posts += '为该用户推荐的评分最高的100部作品是：<br>'
+            # center() 返回一个原字符串居中,并使用空格填充至长度 width 的新字符串。默认填充字符为空格。
+            if cachePostMap:
+                posts_df = pickle.loads(cachePostMap)
+            else:
+                posts_df = self.getPostsDf()
+            for i in sortedResult:
+                posts += '评分: %.2f, 作品ID: %s' % (predicts[i,int(userID)], posts_df.iloc[i]['postID'])
+                posts += "<br>"
+                idx += 1
+                if idx == 100:break
+            return posts
+        else:
+            self.run(userID)
