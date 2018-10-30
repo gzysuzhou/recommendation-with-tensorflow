@@ -5,6 +5,8 @@ class PreHandle(object):
 
     def __init__(self):
         self.conn = Mysql()
+
+    def run(self):
         self.createUserPostScore()
         self.createPostTagCsv()
         self.conn.dispose()
@@ -70,5 +72,3 @@ class PreHandle(object):
                 f.close()
         except:
             self.conn.dispose()
-
-PreHandle()
