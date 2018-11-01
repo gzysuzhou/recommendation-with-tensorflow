@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import redis
 from mysql import Mysql
 
@@ -7,7 +8,7 @@ class UserIDTransfer(object):
 
     def __init__(self):
         UserIDTransfer.redis = redis.Redis(host='127.0.0.1', port=6379, db=0)
-        
+
 
     #首次加载入缓存
     def loadData(self):

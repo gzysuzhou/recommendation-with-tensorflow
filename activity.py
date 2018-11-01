@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from mysql import Mysql
 from userIdTransfer import UserIDTransfer
 import time

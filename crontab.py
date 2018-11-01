@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from prehandle import PreHandle
 from recommand import Recommand
 
