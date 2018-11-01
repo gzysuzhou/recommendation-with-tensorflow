@@ -57,4 +57,7 @@ def get_recommandation(userID, skip, limit):
     else:
         return json.dumps([])
 
+if __name__ == '__main__':
+    app.run(port=80)
+
 
