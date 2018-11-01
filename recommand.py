@@ -168,6 +168,7 @@ class Recommand(object):
             sortedResult = predicts[:, int(userID)].argsort()[::-1]
             # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
             idx = num_skip = 0
+            totalCount = len(predicts)
             if cachePostMap:
                 posts_df = pickle.loads(cachePostMap)
             else:

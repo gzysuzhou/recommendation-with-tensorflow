@@ -1,4 +1,5 @@
 from prehandle import PreHandle
+from recommand import Recommand
 
 class Tasks(object):
 
@@ -7,7 +8,7 @@ class Tasks(object):
 
     def updateRecommandation(self):
         PreHandle().run()
+        Recommand().run(1, 0, 1)
         print('done')
-
 
 Tasks().run()
