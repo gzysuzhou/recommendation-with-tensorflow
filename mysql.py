@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
-import MySQLdb
-from MySQLdb.cursors import DictCursor
+import pymysql
+from pymysql.cursors import DictCursor
 from DBUtils.PooledDB import PooledDB
 
 import config
@@ -28,7 +28,7 @@ class Mysql(object):
         @return MySQLdb.connection
         """
         if Mysql.__pool is None:
-            __pool = PooledDB(creator = MySQLdb, mincached = 1, maxcached=20,
+            __pool = PooledDB(creator = pymysql, mincached = 1, maxcached=20,
                               host = config.DB_HOST, port = config.DB_PORT, user = config.DB_USER, passwd = config.DB_PASSWORD,
                               db = config.DB_NAME, charset = config.DB_CHARSET, cursorclass = DictCursor)
         return __pool.connection()
