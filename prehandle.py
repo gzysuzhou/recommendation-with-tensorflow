@@ -54,7 +54,9 @@ class PreHandle(object):
                 user_post.append(item)
             self.createDictCSV("user_score.csv", user_post)
         except:
-            self.conn.dispose()
+            #self.conn.dispose()
+            print('exception')
+
 
     def createPostTagCsv(self):
         try:
@@ -72,4 +74,6 @@ class PreHandle(object):
                     csvWriter.writerow(item)
                 f.close()
         except:
-            self.conn.dispose()
+            #self.conn.dispose()
+            print('exception')
+

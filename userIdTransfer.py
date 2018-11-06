@@ -29,9 +29,15 @@ class UserIDTransfer(object):
             return int(number)
         else:
             sql = "select * from user_id_map where string = %s "
-            number = Mysql().getOne(sql, [stringUserId])
+            row = Mysql().getOne(sql, [stringUserId])
+            if not row:
+                return False
+            number = row["int"]
             if number:
                 return int(number)
             else:
                 return False
+
+if __name__ == '__main__':
+    UserIDTransfer().loadData()
 

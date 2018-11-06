@@ -141,6 +141,13 @@ class Recommand(object):
         sortedResult = predicts[:, int(userID)].argsort()[::-1]
         # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
         idx = num_skip = 0
+        hasNextPage = True
+        nextCursor = 0
+        totalCount = len(predicts)
+        if skip + limit >= totalCount:
+            hasNextPage = False
+        if hasNextPage:
+            nextCursor = skip + limit
         recommandations = []
         for i in sortedResult:
             #print('评分: %.2f, 作品ID: %s' % (predicts[i,int(userID)],self.posts_df.iloc[i]['postID']))
@@ -156,7 +163,7 @@ class Recommand(object):
                 recommandations.append({"postID": self.posts_df.iloc[i]['postID'], "score": predicts[i,int(userID)]})
                 idx += 1
                 if idx == limit:break
-        return recommandations
+        return recommandations, totalCount, hasNextPage, nextCursor
 
     
     def getRecommand(self, userID, skip = 0, limit = 30):
@@ -169,7 +176,13 @@ class Recommand(object):
             sortedResult = predicts[:, int(userID)].argsort()[::-1]
             # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
             idx = num_skip = 0
+            hasNextPage = True
+            nextCursor = 0
             totalCount = len(predicts)
+            if skip + limit >= totalCount:
+                hasNextPage = False
+            if hasNextPage:
+                nextCursor = skip + limit
             if cachePostMap:
                 posts_df = pickle.loads(cachePostMap)
             else:
@@ -187,7 +200,7 @@ class Recommand(object):
                     recommandations.append({"postID": posts_df.iloc[i]['postID'], "score": predicts[i,int(userID)]})
                     idx += 1
                     if idx == limit:break
-            return recommandations
+            return recommandations, totalCount, hasNextPage, nextCursor
         else:
             return self.run(userID, skip, limit)
             

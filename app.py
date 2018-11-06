@@ -51,11 +51,11 @@ def get_recommandation(userID, skip, limit):
     userIDNumber = UserIDTransfer().getUserIdByString(userID)
     if not userIDNumber:
         return json.dumps([])
-    result = Recommand().getRecommand(userIDNumber, skip, limit)
-    if result:
-        return json.dumps(result)
+    recommandations, totalCount, hasNextPage, nextCursor = Recommand().getRecommand(userIDNumber, skip, limit)
+    if recommandations:
+        return json.dumps({"totalCount": totalCount, "pageInfo": {"hasNextPage": hasNextPage, "nextCursor": nextCursor}, "nodes": recommandations})
     else:
-        return json.dumps([])
+        return json.dumps({"totalCount": 0, "pageInfo": {"hasNextPage": False, "nextCursor": 0}, "nodes": []})
 
 if __name__ == '__main__':
     app.run(port=80)
