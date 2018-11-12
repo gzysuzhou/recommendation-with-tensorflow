@@ -5,6 +5,8 @@ import tensorflow as tf
 import time
 import redis
 import pickle
+from prehandle import PreHandle
+from pandas.core.frame import DataFrame
 class Recommand(object):
     
     redis = None
@@ -24,10 +26,29 @@ class Recommand(object):
     第一步：收集和清洗数据
     '''
     def cleanData(self):
-        ratings_df = pd.read_csv('user_score.csv')
-        posts_df = pd.read_csv('postTag.csv')
+        ratings = Recommand.redis.hgetall(PreHandle.userPostScoreHashKey)
+        userIDs = []
+        postIDs = []
+        scores = []
+        for (userID, values) in ratings.items():
+            for v in pickle.loads(values):
+                userIDs.append(int(userID))
+                postIDs.append(v["postID"])
+                scores.append(v["score"])
+        c = {"userID": userIDs, "postID": postIDs, "score": scores}
+        ratings_df = DataFrame(c) #将字典转换成为数据框
+        post_tags = Recommand.redis.hgetall(PreHandle.postTagHashKey)
+        postIDs = []
+        tags = []
+        for (postID, value) in post_tags.items():
+            postIDs.append(postID.decode())
+            tags.append(value.decode())
+        t = {"postID": postIDs, "tag": tags}
+        posts_df = DataFrame(t)
+        #ratings_df = pd.read_csv('user_score.csv')
+        #posts_df = pd.read_csv('postTag.csv')
         posts_df['postRow'] = posts_df.index
-        self.posts_df = posts_df[['postRow','postID','name']]
+        self.posts_df = posts_df[['postRow','postID']]
         serliaze = pickle.dumps(self.posts_df)
         Recommand.redis.set(Recommand.postKey, serliaze)
         ratings_df = pd.merge(ratings_df, posts_df, on='postID')
@@ -124,7 +145,7 @@ class Recommand(object):
         init = tf.global_variables_initializer()
         sess.run(init)
         #运行
-        for i in range(1):
+        for i in range(100):
             _, post_summary = sess.run([self.train, summaryMerged])
             # 把训练的结果summaryMerged存在post里
             writer.add_summary(post_summary, i)
@@ -171,7 +192,7 @@ class Recommand(object):
         cachePostMap = Recommand.redis.get(Recommand.postKey)
         posts_df = []
         recommandations = []
-        if cacheRecommand:
+        if False:
             predicts = pickle.loads(cacheRecommand)
             sortedResult = predicts[:, int(userID)].argsort()[::-1]
             # argsort()函数返回的是数组值从小到大的索引值; argsort()[::-1] 返回的是数组值从大到小的索引值
@@ -203,4 +224,6 @@ class Recommand(object):
             return recommandations, totalCount, hasNextPage, nextCursor
         else:
             return self.run(userID, skip, limit)
+
+Recommand().run(1,0,1)
             
