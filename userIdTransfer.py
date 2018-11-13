@@ -34,6 +34,7 @@ class UserIDTransfer(object):
                 return False
             number = row["int"]
             if number:
+                self.incrData(number, stringUserId)
                 return int(number)
             else:
                 return False

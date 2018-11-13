@@ -35,9 +35,9 @@ init = tf.global_variables_initializer()
 sess.run(init)
  
 #print("W",sess.run(w),"b=",sess.run(b),"loss=",sess.run(loss))
-for step in range(20):
+for step in range(10):
   sess.run(train)
-  print("W=",sess.run(w),"b=",sess.run(b),"loss=",sess.run(loss))
+  #print("W=",sess.run(w),"b=",sess.run(b),"loss=",sess.run(loss))
  
 plt.scatter(x_data,y_data,c='r')
 plt.plot(x_data,sess.run(w)*x_data+sess.run(b))

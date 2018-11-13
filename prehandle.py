@@ -15,26 +15,12 @@ class PreHandle(object):
 
     def run(self):
         self.createUserPostScore()
-        self.createPostTagCsv()
+        self.createPostTag()
         self.conn.dispose()
-        
-    def createDictCSV(self, fileName="", dataList=[]):
-        fieldnames =['userID','postID','score']
-        item = {}
-        with open(fileName, "w", encoding='utf8', newline='') as f:
-            csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
-            csvWriter.writeheader()
-            for dataDict in dataList:
-                   item['userID'] = dataDict["userID"]
-                   item['postID'] = dataDict["postID"]
-                   item['score'] = dataDict["score"]
-                   csvWriter.writerow(item)
-            f.close()
         
     def createUserPostScore(self):
         sql = "SELECT * FROM activity"
         result = self.conn.getAll(sql)
-        user_post = []
         user_post_score_dist = {}
         userID = 0
         userIDStrings = {}
@@ -61,31 +47,24 @@ class PreHandle(object):
                 user_post_score_dist[userID].append(item)
             else:
                 user_post_score_dist[userID] = [item]
-            user_post.append(item)
-        #PreHandle.redis.hgetall(PreHandle.userPostScoreHashKey)
-        #PreHandle.redis.delete(PreHandle.userPostScoreHashKey)
         for (userID, scores) in user_post_score_dist.items():
-            PreHandle.redis.hset(PreHandle.userPostScoreHashKey, userID, pickle.dumps(scores))
-        self.createDictCSV("user_score.csv", user_post)
+            items = {}
+            currentUserScores = []
+            for index, score in enumerate(scores):
+                if score['postID'] in items:
+                    items[score['postID']] += score['score']
+                else:
+                    items[score['postID']] = score['score']
+            for postID, score in items.items():
+                currentUserScores.append({"userID": userID, "postID": postID, "score": score})
+            #print(currentUserScores)
+            PreHandle.redis.hset(PreHandle.userPostScoreHashKey, userID, pickle.dumps(currentUserScores))
         
-
-
-    def createPostTagCsv(self):
+    def createPostTag(self):
         sql = "SELECT * FROM post"
         result = self.conn.getAll(sql)
-        fieldnames =['postID','name','tag']
-        item = {}
-        PreHandle.redis.delete(PreHandle.postTagHashKey)
-        with open("postTag.csv", "w", encoding='utf8', newline='') as f:
-            csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
-            csvWriter.writeheader()
-            for row in result:
-                item['postID'] = row['post_id']
-                item['name'] = row['name']
-                item['tag'] = row['tags']
-                csvWriter.writerow(item)
-                PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], row['tags'].encode("utf8"))
-            f.close()
-
+        for row in result:
+            PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], row['tags'].encode("utf8"))
+            
 PreHandle().run()
 

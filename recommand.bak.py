@@ -49,7 +49,9 @@ class Recommand(object):
         self.posts_df = posts_df[['postRow','postID']]
         ratings_df = pd.merge(ratings_df, posts_df, on='postID')
         self.ratings_df = ratings_df[['userID','postRow','score']]
-        
+        #serliaze = pickle.dumps(self.posts_df)
+        #Recommand.redis.set(Recommand.postKey, serliaze)
+    
     def getPostsDf(self):
         post_tags = Recommand.redis.hgetall(PreHandle.postTagHashKey)
         postIDs = []
@@ -131,12 +133,28 @@ class Recommand(object):
     第四步：训练模型
     '''
     def trainningModel(self, userID, skip, limit):
+        # tf.summary的用法 https://www.cnblogs.com/lyc-seu/p/8647792.html
+        '''
+        tf.summary.scalar('loss',self.loss)
+        #用来显示标量信息
+        summaryMerged = tf.summary.merge_all()
+        #merge_all 可以将所有summary全部保存到磁盘，以便tensorboard显示。
+        filename = './post_tensorboard'
+        writer = tf.summary.FileWriter(filename)
+        #指定一个文件用来保存图。
+        '''
         sess = tf.Session()
         #https://www.cnblogs.com/wuzhitj/p/6648610.html
         init = tf.global_variables_initializer()
         sess.run(init)
         #运行
         for i in range(50):
+            '''
+            _, post_summary = sess.run([self.train, summaryMerged])
+            # 把训练的结果summaryMerged存在post里
+            writer.add_summary(post_summary, i)
+            # 把训练的结果保存下来
+            '''
             sess.run(self.train) #不显示训练结果
         Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
@@ -159,6 +177,7 @@ class Recommand(object):
             nextCursor = skip + limit
         recommandations = []
         for i in sortedResult:
+            #print('评分: %.2f, 作品ID: %s' % (predicts[i,int(userID)],self.posts_df.iloc[i]['postID']))
             if (skip > 0):
                 if (num_skip > skip-1):
                     recommandations.append({"postID": self.posts_df.iloc[i]['postID'], "score": predicts[i,int(userID)]})
