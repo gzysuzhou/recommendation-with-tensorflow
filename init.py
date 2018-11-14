@@ -4,51 +4,45 @@ import math
 import json
 import csv
 from operator import itemgetter
-import pymysql
+from mysql import Mysql
 import time
-db = pymysql.Connect(
-    host='localhost',
-    port=3306,
-    user='root',
-    passwd='root',
-    db='calicali',
-    charset='utf8'
-)
-cursor = db.cursor()
+import os
 #https://www.jianshu.com/p/0d84b8fc9063
 class initLeanCloudData(object):
-    
-    def load_data(self, path_activity, path_post, path_tag, path_tag_post):
+
+    def load_activity(self, path_activity):
         with open(path_activity, encoding='utf-8') as f:
              activitys = json.load(f)
         userID = 0
         userIDStrings = {}
-        userIDMapValues = ''
-        activityValues = ''
+        userIDMapValues = []
+        activityValues = []
         i = 1 
         for activity in activitys["results"]:
             item = {}
-            if (activity["user"]["objectId"] in userIDStrings):
+            if activity["user"]["objectId"] in userIDStrings:
                 item["userID"] = userIDStrings[activity["user"]["objectId"]]
             else:
                 userID +=1
                 userIDStrings[activity["user"]["objectId"]] = userID
                 item["userID"] = userID
-                userIDMapValues += "("+str(userID)+','+ "'"+activity["user"]["objectId"]+"'" "),"
+                userIDMapValues.append((str(userID), activity["user"]["objectId"]))
             item["postID"] = activity["post"]["objectId"]
-            activityValues += "('"+activity["post"]["objectId"] + "','"+activity["user"]["objectId"] + "','" + activity["text"] + "','" + time.strftime('%Y-%m-%d %H:%M:%S') + "'),"
-            if (i % 1000 == 0):
-                activityValues = activityValues[: -1]
-                sql_activity = "INSERT INTO activity(`post_id`, `user_id`, `text`, `created_at`) VALUES " + activityValues
-                cursor.execute(sql_activity)
-                activityValues = ''
+            activityValues.append((activity["post"]["objectId"], activity["user"]["objectId"], activity["text"], time.strftime('%Y-%m-%d %H:%M:%S')))
+            #分批次每次插入1000条
+            if i % 100 == 0:
+                sql_activity = "INSERT INTO activity(`post_id`, `user_id`, `text`, `created_at`) VALUES(%s, %s, %s, %s)" 
+                Mysql().insertMany(sql_activity, activityValues)
+                activityValues = []
             i += 1
-        userIDMapValues = userIDMapValues[: -1]
-        sql = "INSERT INTO user_id_map (`int`, `string`) VALUES " + userIDMapValues
-        cursor.execute(sql)
-        activityValues = activityValues[: -1]
-        sql_activity = "INSERT INTO activity(`post_id`, `user_id`, `text`, `created_at`) VALUES " + activityValues
-        cursor.execute(sql_activity)
+        sql = "INSERT INTO user_id_map (`int`, `string`) VALUES(%s, %s)"
+        Mysql().insertMany(sql, userIDMapValues)
+        #插入剩下不足1000个的部分
+        sql_activity = "INSERT INTO activity(`post_id`, `user_id`, `text`, `created_at`) VALUES(%s, %s, %s, %s)"
+        Mysql().insertMany(sql_activity, activityValues)
+
+    
+    def load_post(self, path_post, path_tag, path_tag_post, path_character, path_character_post):
         #加载作品标签
         with open(path_post, encoding='utf-8') as pf:
             p = json.load(pf)
@@ -58,12 +52,33 @@ class initLeanCloudData(object):
                 item["postID"] = post["objectId"]
                 item["name"] = post["name"]
                 posts.append(item)
+
+        #标签名
         with open(path_tag, encoding='utf-8') as tf:
             t = json.load(tf)
             tags = {}
             for tag in t["results"]:
                 tags[tag["objectId"]] = tag["name"]
-        
+
+        #角色属性字典
+        with open(path_character, encoding='utf-8') as tf:
+            t = json.load(tf)
+            character_attr = {}
+            for character in t["results"]:
+                character_attr[character["objectId"]] = []
+                if "properties" not in character:
+                    continue
+                if '性别' in character["properties"]:
+                    character_attr[character["objectId"]].append(character["properties"]['性别'])
+                #if '发长' in character["properties"]:
+                #    character_attr[character["objectId"]].append(character["properties"]['发长'])
+                if '萌属性' in character["properties"]:
+                    character_attr[character["objectId"]].append(character["properties"]['萌属性'].replace('、', '|'))
+                if len(character_attr[character["objectId"]]) == 0:
+                    continue
+                character_attr[character["objectId"]] = "|".join(character_attr[character["objectId"]])
+
+        #作品ID关联的标签名称 一对多
         with open(path_tag_post, encoding='utf-8') as ptf:
             r = json.load(ptf)
             relations = {}
@@ -72,8 +87,20 @@ class initLeanCloudData(object):
                     relations[relation["owningId"]].append(tags[relation["relatedId"]])
                 else:
                     relations[relation["owningId"]] = [tags[relation["relatedId"]]]
-       
-        post_tag = []
+                    
+        #作品ID关联角色属性 一对多
+        with open(path_character_post, encoding='utf-8') as ptf:
+             r = json.load(ptf)
+             relations_character = {}
+             for relation in r["results"]:
+                if relation["owningId"] in relations_character and character_attr[relation["relatedId"]]:
+                    relations_character[relation["owningId"]] += "|" 
+                    relations_character[relation["owningId"]] += character_attr[relation["relatedId"]]
+                    if "|" in character_attr[relation["relatedId"]]:
+                        relations_character[relation["owningId"]] = "|".join(list(set(relations_character[relation["owningId"]].split("|"))))
+                else:
+                    relations_character[relation["owningId"]] = character_attr[relation["relatedId"]]
+        
         data = []
         j = 1
         for post in posts:
@@ -81,31 +108,39 @@ class initLeanCloudData(object):
             d = ()
             item["postID"] = post["postID"]
             item["name"] = post["name"]
-            if(post["postID"] in relations):
+            #标签字段
+            if post["postID"] in relations:
                 item["tag"] = "|".join(relations[post["postID"]])
-                d = (post["postID"], post["name"], "|".join(relations[post["postID"]]), time.strftime('%Y-%m-%d %H:%M:%S'))
             else:
                 item["tag"] = ""
-                d = (post["postID"], post["name"], "", time.strftime('%Y-%m-%d %H:%M:%S'))
-            post_tag.append(item)
+            #角色属性字段
+            if post["postID"] in relations_character:
+                if relations_character[post["postID"]]:
+                    item["character_attr"] = relations_character[post["postID"]]
+                else:
+                    item["character_attr"] = ""
+            else:
+                item["character_attr"] = ""
+            d = (post["postID"], post["name"], str(item["tag"]), str(item["character_attr"]), time.strftime('%Y-%m-%d %H:%M:%S'))
             data.append(d)
-            if (j % 1000 == 0):
-                sql = "INSERT INTO post(`post_id`, `name`, `tags`, `created_at`) VALUES (%s, %s, %s, %s)"
-                cursor.executemany(sql, data)
+            if j % 100 == 0:
+                sql = "INSERT INTO post(`post_id`, `name`, `tags`, `character_attr`, `created_at`) VALUES (%s, %s, %s, %s, %s)"
+                Mysql().insertMany(sql, data)
                 data = []
             j += 1
-        if (len(data) > 0):
-            sql = "INSERT INTO post(`post_id`, `name`, `tags`, `created_at`) VALUES (%s, %s, %s, %s)"
-            cursor.executemany(sql, data)
+        if len(data) > 0:
+            sql = "INSERT INTO post(`post_id`, `name`, `tags`, `character_attr`, `created_at`) VALUES (%s, %s, %s, %s, %s)"
+            Mysql().insertMany(sql, data)
 
-    def __init__(self,path_activity, path_post, path_tag, path_tag_post):
-        self.load_data(path_activity, path_post, path_tag, path_tag_post)
+    def __init__(self,path_activity, path_post, path_tag, path_tag_post, path_character, path_character_post):
+        self.load_activity(path_activity)
+        self.load_post(path_post, path_tag, path_tag_post, path_character, path_character_post)
         
 
-path_activity = '.\\source\\Activity.json'
-path_post = '.\\source\\Post.json'
-path_tag = '.\\source\\Tag.json'
-path_tag_post = '.\\source\\_Join_Tag_tags_Post.json'
-r = initLeanCloudData(path_activity, path_post, path_tag, path_tag_post)
-cursor.close()
-db.close()
+path_activity = 'source'+os.sep+'calicali-dev'+os.sep+'Activity.json'
+path_post = 'source'+os.sep+'calicali-dev'+os.sep+'Post.json'
+path_tag = 'source'+os.sep+'calicali-dev'+os.sep+'Tag.json'
+path_tag_post = 'source'+os.sep+'calicali-dev'+os.sep+'_Join_Tag_tags_Post.json'
+path_character = 'source'+os.sep+'calicali-dev'+os.sep+'Character.json'
+path_character_post = 'source'+os.sep+'calicali-dev'+os.sep+'_Join_Character_characters_Post.json'
+r = initLeanCloudData(path_activity, path_post, path_tag, path_tag_post, path_character, path_character_post)

@@ -7,6 +7,7 @@ import redis
 import pickle
 from prehandle import PreHandle
 from pandas.core.frame import DataFrame
+import sys
 class Recommand(object):
     
     redis = None
@@ -141,6 +142,7 @@ class Recommand(object):
         Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
         predicts = np.dot(Current_X_parameters, Current_Theta_parameters.T) + self.rating_mean
+        #print(sys.getsizeof(predicts))
         # 保存到缓存
         serliaze = pickle.dumps(predicts)
         Recommand.redis.set(Recommand.recommandResultKey, serliaze)

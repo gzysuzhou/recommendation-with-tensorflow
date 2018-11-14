@@ -64,7 +64,12 @@ class PreHandle(object):
         sql = "SELECT * FROM post"
         result = self.conn.getAll(sql)
         for row in result:
-            PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], row['tags'].encode("utf8"))
+            tagAttr = ''
+            if row['tags']:
+                tagAttr += row['tags']
+            if row['character_attr']:
+                tagAttr += row['character_attr']
+            PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], tagAttr.encode("utf8"))
             
 PreHandle().run()
 
