@@ -101,7 +101,7 @@ class initLeanCloudData(object):
                     relations_character[relation["owningId"]] = "|".join(list(set(relations_character[relation["owningId"]].split("|"))))
                 else:
                     relations_character[relation["owningId"]] = character_attr[relation["relatedId"]]['string']
-        print(relations_character)
+
         data = []
         j = 1
         for post in posts:
@@ -134,7 +134,7 @@ class initLeanCloudData(object):
             Mysql().insertMany(sql, data)
 
     def __init__(self,path_activity, path_post, path_tag, path_tag_post, path_character, path_character_post):
-        #self.load_activity(path_activity)
+        self.load_activity(path_activity)
         self.load_post(path_post, path_tag, path_tag_post, path_character, path_character_post)
         
 
