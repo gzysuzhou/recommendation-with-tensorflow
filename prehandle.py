@@ -64,12 +64,19 @@ class PreHandle(object):
         sql = "SELECT * FROM post"
         result = self.conn.getAll(sql)
         for row in result:
-            tagAttr = ''
+            tagAttr = []
+            cache = ''
             if row['tags']:
-                tagAttr += row['tags']
+                tagAttr.append(row['tags'])
             if row['character_attr']:
-                tagAttr += row['character_attr']
-            PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], tagAttr.encode("utf8"))
+                tagAttr.append(row['character_attr'])
+            if len(tagAttr) == 0:
+                continue
+            elif len(tagAttr) == 1:
+                cache = tagAttr[0]
+            else:
+                cache = "|".join(list(set("|".join(tagAttr).split("|"))))
+            PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], cache.encode("utf8"))
             
 PreHandle().run()
 

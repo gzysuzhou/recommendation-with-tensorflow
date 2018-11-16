@@ -2,19 +2,22 @@
 from mysql import Mysql
 from userIdTransfer import UserIDTransfer
 import time
+from post import Post
 from prehandle import PreHandle
 import pickle
 
 class Activity:
       
-    def newActivity(self, postID, userID, text):
+    def newActivity(self, postID, postName, userID, text, tags, charactersName, charactersAttr):
         if not postID or not userID or not text:
             return False
         created_at =  time.strftime('%Y-%m-%d %H:%M:%S')
-        sql = "INSERT INTO activity (`post_id`, `user_id`, `text`, `created_at`) VALUES(%s, %s, %s, %s)"
+        sql = "INSERT INTO activity (`post_id`,  `user_id`, `text`, `created_at`) VALUES(%s, %s, %s, %s)"
         affect = Mysql().insertOne(sql, (postID, userID, text, created_at))
         self.newUserIdMapping(userID)
         self.updateUserPostScoreRecord(postID, userID, text)
+        if tags or charactersName or charactersAttr:
+            Post().newPost(postID, postName, tags, charactersName, charactersAttr)
         return affect
 
     '''

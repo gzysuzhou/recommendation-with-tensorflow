@@ -18,27 +18,18 @@ def hello_world():
     return json.dumps(request.args)
 
 '''
-新增作品同步接口
-'''
-@app.route('/post')
-def new_post():
-    postID = request.args.get('postID')
-    postName = request.args.get("postName")
-    postTags = request.args.get('postTags')
-    res = Post().newPost(postID, postName, postTags)
-    if not res:
-        return 'error'
-    return 'success'
-
-'''
-用户行为记录同步接口
+用户行为记录/新增作品同步接口
 '''    
-@app.route('/activity')
+@app.route('/activity', methods=["POST","GET"])
 def new_activity():
     postID = request.args.get('postID')
+    postName = str(request.args.get("postName"))
     userID = request.args.get('userID')
-    text = request.args.get('text')
-    res = Activity().newActivity(postID, userID, text)
+    text = str(request.args.get('text'))
+    tags = str(request.args.get('tags'))
+    charactersName = str(request.args.get('charactersName'))
+    charactersAttr = str(request.args.get('charactersAttr'))
+    res = Activity().newActivity(postID, postName, userID, text, tags, charactersName, charactersAttr)
     if not res:
         return 'error'
     return 'success'

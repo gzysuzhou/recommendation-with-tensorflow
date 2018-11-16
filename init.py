@@ -65,18 +65,20 @@ class initLeanCloudData(object):
             t = json.load(tf)
             character_attr = {}
             for character in t["results"]:
-                character_attr[character["objectId"]] = []
-                if "properties" not in character:
-                    continue
-                if '性别' in character["properties"]:
-                    character_attr[character["objectId"]].append(character["properties"]['性别'])
-                #if '发长' in character["properties"]:
-                #    character_attr[character["objectId"]].append(character["properties"]['发长'])
-                if '萌属性' in character["properties"]:
-                    character_attr[character["objectId"]].append(character["properties"]['萌属性'].replace('、', '|'))
-                if len(character_attr[character["objectId"]]) == 0:
-                    continue
-                character_attr[character["objectId"]] = "|".join(character_attr[character["objectId"]])
+                character_attr[character["objectId"]] = {}
+                character_attr[character["objectId"]]['array'] = []
+                character_attr[character["objectId"]]['string'] = ''
+                character_attr[character["objectId"]]['array'].append(character["name"])
+                if "properties" in character:
+                    if '性别' in character["properties"]:
+                        character_attr[character["objectId"]]['array'].append(character["properties"]['性别'])
+                    if '萌属性' in character["properties"]:
+                        character_attr[character["objectId"]]['array'].append(character["properties"]['萌属性'].replace('、', '|'))
+                if len(character_attr[character["objectId"]]['array']) == 1:
+                    character_attr[character["objectId"]]['string'] = character_attr[character["objectId"]]['array'][0]
+                elif len(character_attr[character["objectId"]]['array']) > 1:
+                    character_attr[character["objectId"]]['string'] = "|".join(character_attr[character["objectId"]]['array'])
+                
 
         #作品ID关联的标签名称 一对多
         with open(path_tag_post, encoding='utf-8') as ptf:
@@ -87,20 +89,19 @@ class initLeanCloudData(object):
                     relations[relation["owningId"]].append(tags[relation["relatedId"]])
                 else:
                     relations[relation["owningId"]] = [tags[relation["relatedId"]]]
-                    
+        
         #作品ID关联角色属性 一对多
         with open(path_character_post, encoding='utf-8') as ptf:
              r = json.load(ptf)
              relations_character = {}
              for relation in r["results"]:
-                if relation["owningId"] in relations_character and character_attr[relation["relatedId"]]:
+                if relation["owningId"] in relations_character and character_attr[relation["relatedId"]]['string']:
                     relations_character[relation["owningId"]] += "|" 
-                    relations_character[relation["owningId"]] += character_attr[relation["relatedId"]]
-                    if "|" in character_attr[relation["relatedId"]]:
-                        relations_character[relation["owningId"]] = "|".join(list(set(relations_character[relation["owningId"]].split("|"))))
+                    relations_character[relation["owningId"]] += character_attr[relation["relatedId"]]['string']
+                    relations_character[relation["owningId"]] = "|".join(list(set(relations_character[relation["owningId"]].split("|"))))
                 else:
-                    relations_character[relation["owningId"]] = character_attr[relation["relatedId"]]
-        
+                    relations_character[relation["owningId"]] = character_attr[relation["relatedId"]]['string']
+        print(relations_character)
         data = []
         j = 1
         for post in posts:
@@ -133,7 +134,7 @@ class initLeanCloudData(object):
             Mysql().insertMany(sql, data)
 
     def __init__(self,path_activity, path_post, path_tag, path_tag_post, path_character, path_character_post):
-        self.load_activity(path_activity)
+        #self.load_activity(path_activity)
         self.load_post(path_post, path_tag, path_tag_post, path_character, path_character_post)
         
 
