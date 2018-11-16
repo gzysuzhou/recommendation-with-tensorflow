@@ -137,7 +137,7 @@ class Recommand(object):
         init = tf.global_variables_initializer()
         sess.run(init)
         #运行
-        for i in range(1000):
+        for i in range(200):
             sess.run(self.train) #不显示训练结果
         Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
