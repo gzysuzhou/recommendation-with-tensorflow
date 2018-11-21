@@ -78,5 +78,5 @@ class PreHandle(object):
                 cache = "|".join(list(set("|".join(tagAttr).split("|"))))
             PreHandle.redis.hset(PreHandle.postTagHashKey, row['post_id'], cache.encode("utf8"))
             
-PreHandle().run()
+#PreHandle().run()
 

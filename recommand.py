@@ -113,8 +113,8 @@ class Recommand(object):
         #对值为NaNN进行处理，改成数值0
 
         num_features = 10
-        self.X_parameters = tf.Variable(tf.random_normal([self.postNo, num_features],stddev = 0.35))
-        self.Theta_parameters = tf.Variable(tf.random_normal([self.userNo, num_features],stddev = 0.35))
+        self.X_parameters = tf.Variable(tf.random_normal([self.postNo, num_features],stddev = 0.35), name = "X_parameters")
+        self.Theta_parameters = tf.Variable(tf.random_normal([self.userNo, num_features],stddev = 0.35), name = "Theta_parameters")
         #tf.Variables()初始化变量
         #tf.random_normal()函数用于从服从指定正太分布的数值中取出指定个数的值，mean: 正态分布的均值。stddev: 正态分布的标准差。dtype: 输出的类型
 
@@ -132,14 +132,24 @@ class Recommand(object):
     第四步：训练模型
     '''
     def trainningModel(self, userID, skip, limit):
-        sess = tf.Session()
-        #https://www.cnblogs.com/wuzhitj/p/6648610.html
-        init = tf.global_variables_initializer()
-        sess.run(init)
-        #运行
-        for i in range(200):
-            sess.run(self.train) #不显示训练结果
-        Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
+        with tf.Session() as sess:
+            #复用训练模型参数
+            init = tf.global_variables_initializer()
+            sess.run(init)
+            recover = tf.train.import_meta_graph('./checkpoint_dir/MyModel.meta')
+            recover.restore(sess,tf.train.latest_checkpoint('./checkpoint_dir'))
+            graph = tf.get_default_graph()
+            Current_X_parameters = sess.run(graph.get_tensor_by_name("X_parameters:0"))
+            Current_Theta_parameters = sess.run(graph.get_tensor_by_name("Theta_parameters:0"))
+            if Current_X_parameters is None:# 重新训练
+                #https://www.cnblogs.com/wuzhitj/p/6648610.html
+                #运行
+                for i in range(200):
+                    sess.run(self.train)
+                Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
+                #保存训练模型参数
+                saver = tf.train.Saver({"X_parameters": self.X_parameters, "Theta_parameters": self.Theta_parameters})
+                saver.save(sess, './checkpoint_dir/MyModel')
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
         predicts = np.dot(Current_X_parameters, Current_Theta_parameters.T) + self.rating_mean
         #print(sys.getsizeof(predicts))
