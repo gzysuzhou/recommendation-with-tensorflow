@@ -136,20 +136,11 @@ class Recommand(object):
             #复用训练模型参数
             init = tf.global_variables_initializer()
             sess.run(init)
-            recover = tf.train.import_meta_graph('./checkpoint_dir/MyModel.meta')
-            recover.restore(sess,tf.train.latest_checkpoint('./checkpoint_dir'))
-            graph = tf.get_default_graph()
-            Current_X_parameters = sess.run(graph.get_tensor_by_name("X_parameters:0"))
-            Current_Theta_parameters = sess.run(graph.get_tensor_by_name("Theta_parameters:0"))
-            if Current_X_parameters is None:# 重新训练
-                #https://www.cnblogs.com/wuzhitj/p/6648610.html
-                #运行
-                for i in range(200):
-                    sess.run(self.train)
-                Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
-                #保存训练模型参数
-                saver = tf.train.Saver({"X_parameters": self.X_parameters, "Theta_parameters": self.Theta_parameters})
-                saver.save(sess, './checkpoint_dir/MyModel')
+            #https://www.cnblogs.com/wuzhitj/p/6648610.html
+            #运行
+            for i in range(200):
+                sess.run(self.train)
+            Current_X_parameters, Current_Theta_parameters = sess.run([self.X_parameters, self.Theta_parameters])
         # Current_X_parameters为用户内容矩阵，Current_Theta_parameters用户喜好矩阵
         predicts = np.dot(Current_X_parameters, Current_Theta_parameters.T) + self.rating_mean
         #print(sys.getsizeof(predicts))
